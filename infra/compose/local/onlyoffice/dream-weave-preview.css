@@ -1,0 +1,48 @@
+/*
+ * Preview-only frontend policy for the self-hosted ONLYOFFICE 8.3.1 bundle.
+ * The documented show*Scroll options are ignored by its embedded PDF wrapper,
+ * so this bundle, rather than the host iframe, owns the clean preview chrome.
+ */
+#header,
+#id_panel_top,
+#id_panel_left,
+#id_panel_right,
+#id_statusbar,
+[id*="toolbar" i],
+[id*="statusbar" i],
+[id*="status_bar" i],
+[class*="toolbar" i],
+[class*="statusbar" i],
+[class*="zoom" i],
+[class*="navigation" i],
+.overlay-controls,
+#btn-left,
+#btn-play,
+#btn-right,
+#header-logo,
+#id_bottom_pannels_container,
+#id_panel_notes,
+#id_notes_overlay,
+#id_vertical_scroll,
+#id_horizontal_scroll,
+#id_horscrollpanel {
+  display: none !important;
+}
+
+#editor_sdk,
+#id_main,
+#id_main_view,
+#id_viewer {
+  inset: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+}
+
+/* The embedded document/PDF viewer paints the page surround on this exact
+ * layer.  Do not set overflow here: hiding overflow on the viewer prevents
+ * the PDF canvas from being composited. */
+#id_viewer {
+  background: #fff !important;
+}

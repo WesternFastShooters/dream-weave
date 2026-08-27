@@ -1,0 +1,22 @@
+syntax = "proto3";
+package dreamweave.v1;
+import "google/api/annotations.proto";
+
+option go_package = "github.com/dream-weave/dream-weave/apps/server/api/dreamweave/v1;v1";
+
+message CreateAssetUploadRequest { string project_id = 1; string file_name = 2; string declared_mime_type = 3; int64 byte_size = 4; }
+message AssetUploadTicket { string upload_id = 1; string upload_url = 2; string method = 3; map<string,string> required_headers = 4; string expires_at = 5; }
+message CompleteAssetUploadRequest { string project_id = 1; string upload_id = 2; }
+message CreateWebAssetRequest { string project_id = 1; string url = 2; string display_name = 3; }
+message Asset { string id = 1; string project_id = 2; string kind = 3; string display_name = 4; string processing_state = 5; }
+message GetAssetAccessRequest { string project_id = 1; string asset_id = 2; }
+message AssetAccess { string url = 1; string expires_at = 2; string file_name = 3; }
+service AssetService {
+  rpc CreateAssetUpload(CreateAssetUploadRequest) returns (AssetUploadTicket) { option (google.api.http) = { post: "/api/dreamweave/v1/projects/{project_id}/asset-uploads" body: "*" }; }
+  rpc CompleteAssetUpload(CompleteAssetUploadRequest) returns (Asset) { option (google.api.http) = { post: "/api/dreamweave/v1/projects/{project_id}/asset-uploads/{upload_id}/complete" body: "*" }; }
+  rpc CreateWebAsset(CreateWebAssetRequest) returns (Asset) { option (google.api.http) = { post: "/api/dreamweave/v1/projects/{project_id}/web-assets" body: "*" }; }
+  rpc GetPreviewAccess(GetAssetAccessRequest) returns (AssetAccess) { option (google.api.http) = { post: "/api/dreamweave/v1/projects/{project_id}/assets/{asset_id}/preview-access" body: "*" }; }
+  rpc GetDownloadAccess(GetAssetAccessRequest) returns (AssetAccess) { option (google.api.http) = { post: "/api/dreamweave/v1/projects/{project_id}/assets/{asset_id}/download-access" body: "*" }; }
+  rpc GetPlaybackAccess(GetAssetAccessRequest) returns (AssetAccess) { option (google.api.http) = { post: "/api/dreamweave/v1/projects/{project_id}/assets/{asset_id}/playback-access" body: "*" }; }
+  rpc GetHtmlPreviewAccess(GetAssetAccessRequest) returns (AssetAccess) { option (google.api.http) = { post: "/api/dreamweave/v1/projects/{project_id}/assets/{asset_id}/html-preview-access" body: "*" }; }
+}

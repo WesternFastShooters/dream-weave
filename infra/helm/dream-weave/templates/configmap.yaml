@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dream-weave.fullname" . }}-runtime
+  labels: {{- include "dream-weave.labels" . | nindent 4 }}
+data:
+  app-origin: {{ printf "https://app.%s" .Values.publicDomain | quote }}
+  preview-origin: {{ printf "https://preview.%s" .Values.publicDomain | quote }}
+  office-origin: {{ printf "https://office.%s" .Values.publicDomain | quote }}
+  postgres-host: {{ .Values.externalServices.postgresHost | quote }}
+  minio-host: {{ .Values.externalServices.minioHost | quote }}
+  minio-bucket: {{ .Values.externalServices.minioBucket | quote }}
+  browser-upload-endpoint: {{ printf "https://app.%s/internal/object-upload" .Values.publicDomain | quote }}

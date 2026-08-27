@@ -1,0 +1,43 @@
+{
+  "name": "@dream-weave/canvas-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./canvas-renderer.css": "./dist/canvas-renderer.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.json && cp src/canvas-renderer.css dist/canvas-renderer.css",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "test": "pnpm run build && vitest run",
+    "test:unit": "pnpm run build && vitest run"
+  },
+  "dependencies": {
+    "@dream-weave/canvas-core": "workspace:*",
+    "@dream-weave/canvas-interaction": "workspace:*",
+    "@dream-weave/di": "workspace:*",
+    "@xyflow/react": "^12.10.2"
+  },
+  "peerDependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "jsdom": "^29.0.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.4"
+  }
+}

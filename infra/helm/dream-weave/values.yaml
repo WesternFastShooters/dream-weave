@@ -1,0 +1,60 @@
+nameOverride: ""
+fullnameOverride: ""
+
+publicDomain: example.com
+clusterIssuer: letsencrypt-prod
+ingressClassName: nginx
+
+images:
+  server: { repository: ghcr.io/dream-weave/server, tag: latest, pullPolicy: IfNotPresent }
+  canvas: { repository: ghcr.io/dream-weave/canvas, tag: latest, pullPolicy: IfNotPresent }
+  officeViewerShell: { repository: ghcr.io/dream-weave/office-viewer-shell, tag: latest, pullPolicy: IfNotPresent }
+  onlyoffice: { repository: onlyoffice/documentserver, tag: "8.3.1", pullPolicy: IfNotPresent }
+
+replicas:
+  server: 2
+  canvas: 2
+  officeViewerShell: 2
+  previewWorker: 1
+
+secrets:
+  runtime:
+    name: dream-weave-runtime
+    databaseUrlKey: database-url
+    minioEndpointKey: minio-endpoint
+    minioAccessKeyKey: minio-access-key
+    minioSecretKeyKey: minio-secret-key
+    bootstrapAdminEmailKey: bootstrap-admin-email
+    bootstrapAdminPasswordKey: bootstrap-admin-password
+    onlyofficeJwtSecretKey: onlyoffice-jwt-secret
+    capabilitySecretKey: capability-secret
+    previewProcessorKey: preview-processor
+
+externalServices:
+  # PostgreSQL and object storage are external services. Their credentials are Secret refs above.
+  postgresHost: postgres.example.svc.cluster.local
+  minioHost: minio.example.svc.cluster.local
+  minioBucket: dream-weave
+  minioPort: 9000
+
+service:
+  serverHttpPort: 8080
+  officeSourceProxyPort: 8081
+  canvasPort: 4173
+  officeViewerPort: 8080
+
+onlyoffice:
+  # This must be the actual Pod CIDR(s) assigned to Document Server; deployment
+  # configuration cannot safely guess it.
+  documentServerCIDRs: ""
+  persistence:
+    storageClass: ""
+    size: 20Gi
+
+networkPolicy:
+  ingressControllerNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: ingress-nginx
+  ingressControllerPodSelector:
+    matchLabels:
+      app.kubernetes.io/name: ingress-nginx

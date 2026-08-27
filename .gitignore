@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output and caches
+dist/
+build/
+coverage/
+.turbo/
+.nx/
+*.tsbuildinfo
+.dev/
+apps/server/media-preview-processor
+apps/server/preview-worker
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test artifacts
+playwright-report/
+test-results/
+blob-report/
+.playwright-cli/
+
+# Editor and operating-system files
+.DS_Store
+.idea/
+.vscode/
+*.swp

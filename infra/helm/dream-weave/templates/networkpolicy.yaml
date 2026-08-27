@@ -1,0 +1,28 @@
+# Selecting the server Pod makes this an allow-list. The source-proxy port has
+# no Service or Ingress and is reachable only by the Document Server Pod.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "dream-weave.fullname" . }}-server-ingress
+  labels: {{- include "dream-weave.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: server
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+{{ toYaml .Values.networkPolicy.ingressControllerNamespaceSelector | indent 12 }}
+          podSelector:
+{{ toYaml .Values.networkPolicy.ingressControllerPodSelector | indent 12 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.serverHttpPort }}
+    - from:
+        - podSelector:
+            matchLabels:
+              app: onlyoffice-document-server
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.officeSourceProxyPort }}

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Dream Weave Office viewer</title>
+    <style>
+      html, body, #office-viewer { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+      #office-viewer > iframe { display: block; width: 100%; height: 100%; border: 0; }
+    </style>
+  </head>
+  <body>
+    <main id="office-viewer" aria-live="polite">Preparing read-only document preview…</main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

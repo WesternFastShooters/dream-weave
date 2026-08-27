@@ -1,0 +1,112 @@
+:root {
+  color: #111;
+  font-family: Geist Sans, ui-sans-serif, system-ui, sans-serif;
+  background: hsl(240 10% 91%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.canvas-app {
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-app__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgb(0 0 0 / 0.1);
+  background: rgb(255 255 255 / 0.84);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.canvas-app__subtitle {
+  color: rgb(0 0 0 / 0.5);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.canvas-app__canvas {
+  min-height: 0;
+}
+
+.login-screen {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  display: grid;
+  width: min(100%, 400px);
+  gap: 16px;
+  padding: 32px;
+  border: 1px solid rgb(0 0 0 / 0.1);
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.08);
+}
+
+.login-card h1,
+.login-card p {
+  margin: 0;
+}
+
+.login-card__eyebrow {
+  color: #3c5eb8;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-card label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.login-card input,
+.login-card button {
+  min-height: 40px;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.login-card input {
+  padding: 8px 10px;
+  border: 1px solid rgb(0 0 0 / 0.22);
+}
+
+.login-card button {
+  border: 0;
+  padding: 0 14px;
+  background: #254db8;
+  color: white;
+  font-weight: 700;
+}
+
+.login-card button:disabled {
+  opacity: 0.65;
+}
+
+.login-card__error {
+  color: #a42727;
+  font-size: 14px;
+}

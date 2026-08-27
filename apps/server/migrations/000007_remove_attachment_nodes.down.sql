@@ -1,0 +1,2 @@
+-- Attachment nodes and assets are deliberately deleted by the forward migration
+-- and cannot be restored by rollback.

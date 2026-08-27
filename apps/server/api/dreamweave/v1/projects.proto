@@ -1,0 +1,16 @@
+syntax = "proto3";
+package dreamweave.v1;
+import "google/api/annotations.proto";
+
+option go_package = "github.com/dream-weave/dream-weave/apps/server/api/dreamweave/v1;v1";
+
+message CreateProjectRequest { string title = 1; string summary = 2; }
+message GetProjectRequest { string project_id = 1; }
+message Project { string id = 1; string title = 2; string summary = 3; string status = 4; string role = 5; }
+message UpsertProjectMemberRequest { string project_id = 1; string user_id = 2; string role = 3; }
+message ProjectMember { string project_id = 1; string user_id = 2; string role = 3; }
+service ProjectService {
+  rpc CreateProject(CreateProjectRequest) returns (Project) { option (google.api.http) = { post: "/api/dreamweave/v1/projects" body: "*" }; }
+  rpc GetProject(GetProjectRequest) returns (Project) { option (google.api.http) = { get: "/api/dreamweave/v1/projects/{project_id}" }; }
+  rpc UpsertProjectMember(UpsertProjectMemberRequest) returns (ProjectMember) { option (google.api.http) = { put: "/api/dreamweave/v1/projects/{project_id}/members/{user_id}" body: "*" }; }
+}

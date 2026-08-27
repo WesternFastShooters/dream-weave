@@ -1,0 +1,158 @@
+{{- $full := include "dream-weave.fullname" . -}}
+{{- $secret := .Values.secrets.runtime.name -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $full }}-server
+  labels: {{- include "dream-weave.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas.server }}
+  selector: { matchLabels: { app.kubernetes.io/component: server } }
+  template:
+    metadata: { labels: { app.kubernetes.io/component: server, app: dream-weave-server } }
+    spec:
+      containers:
+        - name: server
+          image: {{ printf "%s:%s" .Values.images.server.repository .Values.images.server.tag | quote }}
+          imagePullPolicy: {{ .Values.images.server.pullPolicy }}
+          ports:
+            - { name: http, containerPort: {{ .Values.service.serverHttpPort }} }
+            - { name: office-source-proxy, containerPort: {{ .Values.service.officeSourceProxyPort }} }
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.databaseUrlKey }} } }
+            - name: DW_S3_ENDPOINT
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.minioEndpointKey }} } }
+            - name: DW_S3_BUCKET
+              valueFrom: { configMapKeyRef: { name: {{ $full }}-runtime, key: minio-bucket } }
+            - name: DW_S3_BROWSER_UPLOAD_ENDPOINT
+              valueFrom: { configMapKeyRef: { name: {{ $full }}-runtime, key: browser-upload-endpoint } }
+            - name: DW_S3_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.minioAccessKeyKey }} } }
+            - name: DW_S3_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.minioSecretKeyKey }} } }
+            - name: DW_CAPABILITY_SECRET
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.capabilitySecretKey }} } }
+            - name: DW_BOOTSTRAP_ADMIN_EMAIL
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.bootstrapAdminEmailKey }} } }
+            - name: DW_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.bootstrapAdminPasswordKey }} } }
+            - name: ONLYOFFICE_JWT_SECRET
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.onlyofficeJwtSecretKey }} } }
+            - name: DW_APP_ORIGIN
+              valueFrom: { configMapKeyRef: { name: {{ $full }}-runtime, key: app-origin } }
+            - name: DW_PREVIEW_ORIGIN
+              valueFrom: { configMapKeyRef: { name: {{ $full }}-runtime, key: preview-origin } }
+            - name: DW_ONLYOFFICE_DOCUMENT_SERVER_URL
+              valueFrom: { configMapKeyRef: { name: {{ $full }}-runtime, key: office-origin } }
+            - name: DW_OFFICE_SOURCE_PROXY_BASE
+              value: {{ printf "http://%s-server:%v/internal" $full .Values.service.officeSourceProxyPort | quote }}
+            - name: DW_OFFICE_DOCUMENT_SERVER_CIDRS
+              value: {{ required "onlyoffice.documentServerCIDRs is required" .Values.onlyoffice.documentServerCIDRs | quote }}
+            - name: DW_OFFICE_SOURCE_PROXY_PORT
+              value: {{ .Values.service.officeSourceProxyPort | quote }}
+          readinessProbe: { httpGet: { path: /readyz, port: http } }
+          livenessProbe: { httpGet: { path: /healthz, port: http } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $full }}-preview-worker
+  labels: {{- include "dream-weave.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas.previewWorker }}
+  selector: { matchLabels: { app.kubernetes.io/component: preview-worker } }
+  template:
+    metadata: { labels: { app.kubernetes.io/component: preview-worker } }
+    spec:
+      containers:
+        - name: preview-worker
+          image: {{ printf "%s:%s" .Values.images.server.repository .Values.images.server.tag | quote }}
+          command: ["/app/preview-worker"]
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.databaseUrlKey }} } }
+            - name: DW_S3_ENDPOINT
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.minioEndpointKey }} } }
+            - name: DW_S3_BUCKET
+              valueFrom: { configMapKeyRef: { name: {{ $full }}-runtime, key: minio-bucket } }
+            - name: DW_S3_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.minioAccessKeyKey }} } }
+            - name: DW_S3_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.minioSecretKeyKey }} } }
+            - name: DW_PREVIEW_PROCESSOR
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.previewProcessorKey }} } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $full }}-canvas
+  labels: {{- include "dream-weave.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas.canvas }}
+  selector: { matchLabels: { app.kubernetes.io/component: canvas } }
+  template:
+    metadata: { labels: { app.kubernetes.io/component: canvas } }
+    spec:
+      containers:
+        - name: canvas
+          image: {{ printf "%s:%s" .Values.images.canvas.repository .Values.images.canvas.tag | quote }}
+          ports: [{ name: http, containerPort: {{ .Values.service.canvasPort }} }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $full }}-office-viewer-shell
+  labels: {{- include "dream-weave.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas.officeViewerShell }}
+  selector: { matchLabels: { app.kubernetes.io/component: office-viewer-shell } }
+  template:
+    metadata: { labels: { app.kubernetes.io/component: office-viewer-shell } }
+    spec:
+      containers:
+        - name: office-viewer-shell
+          image: {{ printf "%s:%s" .Values.images.officeViewerShell.repository .Values.images.officeViewerShell.tag | quote }}
+          ports: [{ name: http, containerPort: {{ .Values.service.officeViewerPort }} }]
+          env:
+            - name: APP_ORIGIN
+              valueFrom: { configMapKeyRef: { name: {{ $full }}-runtime, key: app-origin } }
+            - name: DOCUMENT_SERVER_UPSTREAM
+              value: {{ printf "%s-onlyoffice-document-server:80" $full | quote }}
+          readinessProbe: { httpGet: { path: /healthz, port: http } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $full }}-onlyoffice-document-server
+  labels: {{- include "dream-weave.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/component: onlyoffice-document-server } }
+  template:
+    metadata: { labels: { app.kubernetes.io/component: onlyoffice-document-server, app: onlyoffice-document-server } }
+    spec:
+      containers:
+        - name: onlyoffice-document-server
+          image: {{ printf "%s:%s" .Values.images.onlyoffice.repository .Values.images.onlyoffice.tag | quote }}
+          env:
+            - { name: JWT_ENABLED, value: "true" }
+            - { name: JWT_HEADER, value: "Authorization" }
+            - { name: JWT_IN_BODY, value: "true" }
+            - { name: ALLOW_PRIVATE_IP_ADDRESS, value: "true" }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.onlyofficeJwtSecretKey }} } }
+          ports: [{ name: http, containerPort: 80 }]
+          readinessProbe: { httpGet: { path: /healthcheck, port: http } }
+          volumeMounts:
+            - { name: onlyoffice-data, mountPath: /var/www/onlyoffice/Data }
+            - { name: onlyoffice-logs, mountPath: /var/log/onlyoffice }
+            - { name: onlyoffice-lib, mountPath: /var/lib/onlyoffice }
+      volumes:
+        - name: onlyoffice-data
+          persistentVolumeClaim: { claimName: {{ $full }}-onlyoffice-data }
+        - name: onlyoffice-logs
+          persistentVolumeClaim: { claimName: {{ $full }}-onlyoffice-logs }
+        - name: onlyoffice-lib
+          persistentVolumeClaim: { claimName: {{ $full }}-onlyoffice-lib }

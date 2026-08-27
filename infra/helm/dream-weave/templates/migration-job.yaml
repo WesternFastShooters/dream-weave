@@ -1,0 +1,27 @@
+{{- $full := include "dream-weave.fullname" . -}}
+{{- $secret := .Values.secrets.runtime.name -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $full }}-migrations
+  labels: {{- include "dream-weave.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app.kubernetes.io/component: migrations }
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: {{ printf "%s:%s" .Values.images.server.repository .Values.images.server.tag | quote }}
+          imagePullPolicy: {{ .Values.images.server.pullPolicy }}
+          command: ["/app/migrate"]
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: {{ $secret }}, key: {{ .Values.secrets.runtime.databaseUrlKey }} } }

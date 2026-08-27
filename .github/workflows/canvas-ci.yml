@@ -1,0 +1,184 @@
+name: canvas-ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  fixture-ui:
+    name: fixture-ui-no-services
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: pnpm/action-setup@v4
+        with: { version: 11 }
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.25.0' }
+      - uses: arduino/setup-protoc@v3
+        with:
+          version: '35.1'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install pinned contract generators
+        working-directory: apps/server
+        run: make install-tools
+      - name: Verify generated Go and TypeScript contracts
+        working-directory: apps/server
+        run: make verify
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @dream-weave/canvas-renderer test
+      - run: pnpm --filter @dream-weave/canvas-app exec playwright install --with-deps chromium
+      # Fixture tests intentionally use only InMemory/fake providers. They do
+      # not start Postgres, MinIO, the server, or Document Server.
+      - run: pnpm --filter @dream-weave/canvas-app exec playwright test --project=fixture-ui
+      - run: pnpm --filter @dream-weave/canvas-app build
+
+  true-service-integration:
+    name: true-service-integration-no-mocks
+    runs-on: ubuntu-latest
+    needs: fixture-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: pnpm/action-setup@v4
+        with: { version: 11 }
+      - name: Write ephemeral real-service environment and verify prerequisites
+        run: |
+          for name in DW_CI_ONLYOFFICE_JWT_SECRET DW_CI_CAPABILITY_SECRET DW_CI_POSTGRES_PASSWORD DW_CI_MINIO_ACCESS_KEY DW_CI_MINIO_SECRET_KEY DW_CI_BOOTSTRAP_ADMIN_PASSWORD DW_CI_SERVER_IMAGE DW_CI_CANVAS_IMAGE; do
+            test -n "$(printenv "$name")" || { echo "$name is a required GitHub secret or variable"; exit 2; }
+          done
+          cat > infra/compose/local/.env.ci <<EOF
+          ONLYOFFICE_JWT_SECRET=$DW_CI_ONLYOFFICE_JWT_SECRET
+          DW_POSTGRES_PASSWORD=$DW_CI_POSTGRES_PASSWORD
+          DW_MINIO_ACCESS_KEY=$DW_CI_MINIO_ACCESS_KEY
+          DW_MINIO_SECRET_KEY=$DW_CI_MINIO_SECRET_KEY
+          DW_CAPABILITY_SECRET=$DW_CI_CAPABILITY_SECRET
+          DW_S3_BUCKET=dreamweave
+          DW_BOOTSTRAP_ADMIN_EMAIL=ci-admin@example.test
+          DW_BOOTSTRAP_ADMIN_PASSWORD=$DW_CI_BOOTSTRAP_ADMIN_PASSWORD
+          DW_DATABASE_URL=postgres://dreamweave:$DW_CI_POSTGRES_PASSWORD@postgres:5432/dreamweave?sslmode=disable
+          DW_SERVER_IMAGE=$DW_CI_SERVER_IMAGE
+          DW_PREVIEW_WORKER_IMAGE=$DW_CI_SERVER_IMAGE
+          DW_CANVAS_IMAGE=$DW_CI_CANVAS_IMAGE
+          EOF
+        env:
+          DW_CI_ONLYOFFICE_JWT_SECRET: ${{ secrets.DW_CI_ONLYOFFICE_JWT_SECRET }}
+          DW_CI_CAPABILITY_SECRET: ${{ secrets.DW_CI_CAPABILITY_SECRET }}
+          DW_CI_POSTGRES_PASSWORD: ${{ secrets.DW_CI_POSTGRES_PASSWORD }}
+          DW_CI_MINIO_ACCESS_KEY: ${{ secrets.DW_CI_MINIO_ACCESS_KEY }}
+          DW_CI_MINIO_SECRET_KEY: ${{ secrets.DW_CI_MINIO_SECRET_KEY }}
+          DW_CI_BOOTSTRAP_ADMIN_PASSWORD: ${{ secrets.DW_CI_BOOTSTRAP_ADMIN_PASSWORD }}
+          DW_CI_SERVER_IMAGE: ${{ vars.DW_CI_SERVER_IMAGE }}
+          DW_CI_CANVAS_IMAGE: ${{ vars.DW_CI_CANVAS_IMAGE }}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @dream-weave/canvas-app exec playwright install --with-deps chromium
+      - name: Install local TLS prerequisite
+        working-directory: infra/compose/local
+        run: sudo apt-get update && sudo apt-get install -y mkcert libnss3-tools && make local-certs
+      - name: Start PostgreSQL, MinIO, server, worker, and canvas
+        working-directory: infra/compose/local
+        run: docker compose --env-file .env.ci -f compose.yaml up -d postgres minio dream-weave-server preview-worker canvas reverse-proxy
+      - name: Run true service integration suite (no InMemory repository)
+        run: pnpm --filter @dream-weave/canvas-app exec playwright test --project=real-service
+        env:
+          DW_E2E_BASE_URL: https://app.localhost
+          DW_E2E_ADMIN_EMAIL: ci-admin@example.test
+          DW_E2E_ADMIN_PASSWORD: ${{ secrets.DW_CI_BOOTSTRAP_ADMIN_PASSWORD }}
+      - name: Verify migration upgrade ledger contains every migration and reruns safely
+        working-directory: infra/compose/local
+        run: |
+          expected="$(find ../../../apps/server/migrations -maxdepth 1 -type f -name '*.up.sql' -printf '%f\n' | sed 's/\.up\.sql$//' | sort)"
+          actual="$(docker compose --env-file .env.ci -f compose.yaml exec -T postgres psql -U dreamweave -d dreamweave -Atc 'SELECT id FROM schema_migrations ORDER BY id')"
+          test "$actual" = "$expected"
+          docker compose --env-file .env.ci -f compose.yaml run --rm --no-deps migrations
+      - if: always()
+        working-directory: infra/compose/local
+        run: docker compose --env-file .env.ci -f compose.yaml logs --no-color && docker compose --env-file .env.ci -f compose.yaml down -v
+
+  office-document-server:
+    name: office-document-server-real-readonly
+    runs-on: ubuntu-latest
+    needs: true-service-integration
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - uses: pnpm/action-setup@v4
+        with: { version: 11 }
+      - name: Write ephemeral Office environment and verify prerequisites
+        run: |
+          command -v docker
+          for name in DW_CI_ONLYOFFICE_JWT_SECRET DW_CI_CAPABILITY_SECRET DW_CI_POSTGRES_PASSWORD DW_CI_MINIO_ACCESS_KEY DW_CI_MINIO_SECRET_KEY DW_CI_BOOTSTRAP_ADMIN_PASSWORD DW_CI_SERVER_IMAGE DW_CI_CANVAS_IMAGE; do
+            test -n "$(printenv "$name")" || { echo "$name is a required GitHub secret or variable"; exit 2; }
+          done
+          cat > infra/compose/local/.env.ci <<EOF
+          ONLYOFFICE_JWT_SECRET=$DW_CI_ONLYOFFICE_JWT_SECRET
+          DW_POSTGRES_PASSWORD=$DW_CI_POSTGRES_PASSWORD
+          DW_MINIO_ACCESS_KEY=$DW_CI_MINIO_ACCESS_KEY
+          DW_MINIO_SECRET_KEY=$DW_CI_MINIO_SECRET_KEY
+          DW_CAPABILITY_SECRET=$DW_CI_CAPABILITY_SECRET
+          DW_S3_BUCKET=dreamweave
+          DW_BOOTSTRAP_ADMIN_EMAIL=ci-admin@example.test
+          DW_BOOTSTRAP_ADMIN_PASSWORD=$DW_CI_BOOTSTRAP_ADMIN_PASSWORD
+          DW_DATABASE_URL=postgres://dreamweave:$DW_CI_POSTGRES_PASSWORD@postgres:5432/dreamweave?sslmode=disable
+          DW_SERVER_IMAGE=$DW_CI_SERVER_IMAGE
+          DW_PREVIEW_WORKER_IMAGE=$DW_CI_SERVER_IMAGE
+          DW_CANVAS_IMAGE=$DW_CI_CANVAS_IMAGE
+          EOF
+        env:
+          DW_CI_ONLYOFFICE_JWT_SECRET: ${{ secrets.DW_CI_ONLYOFFICE_JWT_SECRET }}
+          DW_CI_CAPABILITY_SECRET: ${{ secrets.DW_CI_CAPABILITY_SECRET }}
+          DW_CI_POSTGRES_PASSWORD: ${{ secrets.DW_CI_POSTGRES_PASSWORD }}
+          DW_CI_MINIO_ACCESS_KEY: ${{ secrets.DW_CI_MINIO_ACCESS_KEY }}
+          DW_CI_MINIO_SECRET_KEY: ${{ secrets.DW_CI_MINIO_SECRET_KEY }}
+          DW_CI_BOOTSTRAP_ADMIN_PASSWORD: ${{ secrets.DW_CI_BOOTSTRAP_ADMIN_PASSWORD }}
+          DW_CI_SERVER_IMAGE: ${{ vars.DW_CI_SERVER_IMAGE }}
+          DW_CI_CANVAS_IMAGE: ${{ vars.DW_CI_CANVAS_IMAGE }}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @dream-weave/canvas-app exec playwright install --with-deps chromium
+      - name: Install local TLS prerequisite
+        working-directory: infra/compose/local
+        run: sudo apt-get update && sudo apt-get install -y mkcert libnss3-tools && make local-certs
+      - name: Install Office fixture authoring tool
+        # This produces standards-complete test inputs. Preview rendering below
+        # is still performed by the real ONLYOFFICE Document Server.
+        run: sudo apt-get install -y libreoffice
+      - name: Start real Office network (no DocsAPI mocks)
+        working-directory: infra/compose/local
+        run: docker compose --env-file .env.ci -f compose.yaml up -d --build
+      # The test executes only after a real-fixture provisioning step supplies
+      # a project and three uploaded Office assets in this fresh Compose stack.
+      - name: Verify DOCX/XLSX/PPTX read-only ready and iframe sandbox before load
+        run: pnpm --filter @dream-weave/canvas-app exec playwright test --project=office-real
+        env:
+          DW_E2E_BASE_URL: https://app.localhost
+          DW_E2E_ADMIN_EMAIL: ci-admin@example.test
+          DW_E2E_ADMIN_PASSWORD: ${{ secrets.DW_CI_BOOTSTRAP_ADMIN_PASSWORD }}
+      - if: always()
+        working-directory: infra/compose/local
+        run: docker compose --env-file .env.ci -f compose.yaml logs --no-color && docker compose --env-file .env.ci -f compose.yaml down -v
+
+  static-manifests:
+    name: static-manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - run: helm lint infra/helm/dream-weave --set onlyoffice.documentServerCIDRs=10.0.0.0/8
+      - run: helm template dream-weave infra/helm/dream-weave --set publicDomain=ci.example.test --set onlyoffice.documentServerCIDRs=10.0.0.0/8 > /tmp/dream-weave.yaml
+      - name: Verify production routes and migration hook
+        run: |
+          grep -F 'path: /internal/asset-access/' /tmp/dream-weave.yaml
+          grep -F 'host: "preview.ci.example.test"' /tmp/dream-weave.yaml
+          grep -F 'name: DW_PREVIEW_ORIGIN' /tmp/dream-weave.yaml
+          grep -F 'path: /internal/object-upload(/|$)(.*)' /tmp/dream-weave.yaml
+          grep -F 'name: office-source-proxy' /tmp/dream-weave.yaml
+          grep -F 'name: DW_S3_BROWSER_UPLOAD_ENDPOINT' /tmp/dream-weave.yaml
+          grep -F '"helm.sh/hook": pre-install,pre-upgrade' /tmp/dream-weave.yaml
+          grep -F 'nginx.ingress.kubernetes.io/proxy-body-size: "1g"' /tmp/dream-weave.yaml
+      - run: docker compose -f infra/compose/local/compose.yaml config --no-interpolate --quiet

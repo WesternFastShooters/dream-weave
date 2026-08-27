@@ -1,0 +1,9 @@
+syntax = "proto3";
+package dreamweave.v1;
+import "google/api/annotations.proto";
+
+option go_package = "github.com/dream-weave/dream-weave/apps/server/api/dreamweave/v1;v1";
+
+message CreateOfficeSessionRequest { string project_id = 1; string asset_id = 2; }
+message OfficeViewerSessionRuntimeConfig { string session_id = 1; string document_server_url = 2; string document_url = 3; string document_key = 4; string token = 5; string document_title = 6; string file_type = 7; string document_type = 8; string expires_at = 9; }
+service OfficeService { rpc CreateOfficeSession(CreateOfficeSessionRequest) returns (OfficeViewerSessionRuntimeConfig) { option (google.api.http) = { post: "/api/dreamweave/v1/projects/{project_id}/assets/{asset_id}/office-sessions" body: "*" }; } }

@@ -1,0 +1,44 @@
+{
+  "name": "@dream-weave/creative-nodes",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./creative-nodes.css": "./dist/creative-nodes.css",
+    "./product-brief.css": "./dist/product-brief.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.json && cp src/creative-nodes.css dist/creative-nodes.css && cp src/product-brief.css dist/product-brief.css",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "test": "pnpm run build && node --test test/*.test.mjs && vitest run"
+  },
+  "dependencies": {
+    "@dream-weave/canvas-core": "workspace:*",
+    "@dream-weave/canvas-interaction": "workspace:*",
+    "@dream-weave/canvas-renderer": "workspace:*",
+    "@dream-weave/di": "workspace:*",
+    "@milkdown/core": "7.21.3",
+    "@milkdown/crepe": "7.21.3",
+    "@milkdown/prose": "7.21.3",
+    "@milkdown/utils": "7.21.3",
+    "@xyflow/react": "^12.10.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "wavesurfer.js": "7.10.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "16.3.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "jsdom": "29.1.1",
+    "typescript": "^6.0.3",
+    "vitest": "4.1.10"
+  }
+}

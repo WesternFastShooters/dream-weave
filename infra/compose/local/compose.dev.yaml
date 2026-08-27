@@ -1,0 +1,25 @@
+# Development overlay. Stateful dependencies stay in Docker, while the Go
+# server/worker and Vite run on the host for fast edit/restart cycles.
+services:
+  postgres:
+    ports: ["127.0.0.1:5432:5432"]
+
+  minio:
+    ports: ["127.0.0.1:9000:9000"]
+
+  reverse-proxy:
+    # Docker Desktop publishes host.docker.internal as both IPv4 and IPv6.
+    # The host service binds IPv4 only, so use a dedicated IPv4-only alias.
+    extra_hosts: ["dream-weave-host:host-gateway"]
+    volumes:
+      - ./nginx/reverse-proxy.dev.conf:/etc/nginx/conf.d/default.conf:ro
+
+  onlyoffice-document-server:
+    extra_hosts: ["dream-weave-host:host-gateway"]
+
+# The host-run source proxy is reachable through Docker Desktop's host gateway.
+# `internal: true` removes that route, so development keeps this network private
+# by membership (no published OnlyOffice ports) while allowing that one gateway.
+networks:
+  office-internal:
+    internal: false

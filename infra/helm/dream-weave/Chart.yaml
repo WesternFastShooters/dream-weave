@@ -1,0 +1,5 @@
+apiVersion: v2
+name: dream-weave
+version: 0.1.0
+appVersion: "0.1.0"
+description: Dream Weave canvas, preview worker, and isolated ONLYOFFICE viewer deployment

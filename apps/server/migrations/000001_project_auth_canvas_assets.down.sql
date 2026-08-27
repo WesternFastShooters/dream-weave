@@ -1,0 +1,12 @@
+DROP TABLE IF EXISTS asset_uploads;
+DROP TABLE IF EXISTS canvas_command_receipts;
+DROP TABLE IF EXISTS canvas_node_placements;
+DROP TABLE IF EXISTS canvas_nodes;
+DROP TABLE IF EXISTS preview_jobs;
+DROP TABLE IF EXISTS preview_artifacts;
+DROP TABLE IF EXISTS assets;
+DROP TABLE IF EXISTS canvas_documents;
+DROP TABLE IF EXISTS project_members;
+DROP TABLE IF EXISTS projects;
+DROP TABLE IF EXISTS auth_sessions;
+DROP TABLE IF EXISTS users;

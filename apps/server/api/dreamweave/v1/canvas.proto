@@ -1,0 +1,82 @@
+syntax = "proto3";
+package dreamweave.v1;
+import "google/api/annotations.proto";
+
+option go_package = "github.com/dream-weave/dream-weave/apps/server/api/dreamweave/v1;v1";
+
+message Placement { string node_id = 1; double x = 2; double y = 3; double width = 4; double height = 5; int32 z_index = 6; }
+message CanvasConnection {
+  string id = 1;
+  string source_node_id = 2;
+  string source_handle = 3;
+  string target_node_id = 4;
+  string target_handle = 5;
+  string shape = 6;
+  string stroke = 7;
+  string direction = 8;
+  double source_x = 9;
+  double source_y = 10;
+  double target_x = 11;
+  double target_y = 12;
+}
+message FrameData { string title = 1; string description = 2; string color = 3; }
+message GetCanvasRequest { string project_id = 1; }
+message MarkdownRenderData { string markdown = 1; }
+message ImageRenderData { bool preview_available = 1; string format = 2; }
+message AudioRenderData { string format = 1; int64 duration_ms = 2; repeated double waveform = 3; string scene_label = 4; }
+message VideoRenderData { bool poster_available = 1; int64 duration_ms = 2; string shot_label = 3; }
+message WebRenderData { string url = 1; bool embeddable = 2; }
+message HtmlRenderData { bool preview_available = 1; }
+message PdfRenderData { bool preview_available = 1; }
+message OfficeRenderData { string office_kind = 1; string file_type = 2; bool preview_available = 3; }
+message FrameRenderData { string description = 1; string color = 2; }
+message RenderData {
+  oneof value {
+    MarkdownRenderData markdown = 1; ImageRenderData image = 2; AudioRenderData audio = 3;
+    VideoRenderData video = 4; WebRenderData web_preview = 5; HtmlRenderData html = 6;
+    PdfRenderData pdf = 7; OfficeRenderData office = 8;
+    FrameRenderData frame = 10;
+  }
+}
+message CanvasNodeSnapshot { string id = 1; string kind = 2; string title = 3; string summary = 4; string asset_id = 5; RenderData render_data = 6; string created_at = 7; string updated_at = 8; }
+message CanvasDocumentSnapshot { string project_id = 1; int64 revision = 2; repeated CanvasNodeSnapshot nodes = 3; repeated Placement placements = 4; repeated CanvasConnection connections = 5; }
+message CreateMarkdownNode { string node_id = 1; string markdown = 2; Placement placement = 3; }
+message UpdateMarkdownNode { string node_id = 1; string markdown = 2; }
+message CreateAssetNode { string node_id = 1; string asset_id = 2; Placement placement = 3; }
+message CreateFrameNode { string node_id = 1; FrameData frame_data = 2; Placement placement = 3; }
+message UpdateFrameNode { string node_id = 1; string title = 2; }
+message DeleteNodes { repeated string node_ids = 1; }
+message SetPlacements { repeated Placement placements = 1; }
+message CreateConnection { CanvasConnection connection = 1; }
+message UpdateConnection { CanvasConnection connection = 1; }
+message DeleteConnections { repeated string connection_ids = 1; }
+message CanvasMutation {
+  oneof value {
+    CreateMarkdownNode create_markdown_node = 1; UpdateMarkdownNode update_markdown_node = 2;
+    CreateAssetNode create_asset_node = 3; CreateFrameNode create_frame_node = 4;
+    DeleteNodes delete_nodes = 5; SetPlacements set_placements = 6;
+    UpdateFrameNode update_frame_node = 7;
+    CreateConnection create_connection = 8;
+    UpdateConnection update_connection = 9;
+    DeleteConnections delete_connections = 10;
+  }
+}
+message ApplyCanvasMutationsRequest { string project_id = 1; int64 expected_revision = 2; string request_id = 3; repeated CanvasMutation mutations = 4; }
+message CanvasRevisionConflictDetails { int64 current_revision = 1; }
+message FieldViolation { string field = 1; string reason = 2; }
+message ValidationDetails { repeated FieldViolation field_violations = 1; }
+message RequestIdReusedDetails { string request_id = 1; }
+message AssetNotReadyDetails { string asset_id = 1; string state = 2; }
+message ApiError {
+  string code = 1; string message = 2;
+  oneof details {
+    CanvasRevisionConflictDetails canvas_revision_conflict = 3;
+    ValidationDetails validation = 4;
+    RequestIdReusedDetails request_id_reused = 5;
+    AssetNotReadyDetails asset_not_ready = 6;
+  }
+}
+service CanvasService {
+  rpc GetCanvas(GetCanvasRequest) returns (CanvasDocumentSnapshot) { option (google.api.http) = { get: "/api/dreamweave/v1/projects/{project_id}/canvas" }; }
+  rpc ApplyCanvasMutations(ApplyCanvasMutationsRequest) returns (CanvasDocumentSnapshot) { option (google.api.http) = { post: "/api/dreamweave/v1/projects/{project_id}/canvas/commands" body: "*" }; }
+}

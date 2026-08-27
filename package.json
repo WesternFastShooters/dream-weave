@@ -1,0 +1,25 @@
+{
+  "name": "dream-weave",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Dream Weave monorepo",
+  "scripts": {
+    "dev": "pnpm --filter @dream-weave/canvas-app dev",
+    "generate:api": "make -C apps/server api",
+    "build": "pnpm -r --if-present run build",
+    "lint": "pnpm -r --if-present run lint",
+    "test": "pnpm -r --if-present run test",
+    "typecheck": "pnpm -r --if-present run typecheck"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.5.2",
+      "onFail": "download"
+    }
+  },
+  "type": "module"
+}

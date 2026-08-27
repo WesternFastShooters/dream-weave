@@ -1,0 +1,17 @@
+{{- $full := include "dream-weave.fullname" . -}}
+{{- range $name := list "data" "logs" "lib" }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $full }}-onlyoffice-{{ $name }}
+  labels: {{- include "dream-weave.labels" $ | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: {{ $.Values.onlyoffice.persistence.size }}
+  {{- with $.Values.onlyoffice.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}

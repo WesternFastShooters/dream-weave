@@ -1,0 +1,92 @@
+{{- $full := include "dream-weave.fullname" . -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $full }}-app
+  labels: {{- include "dream-weave.labels" . | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.clusterIssuer | quote }}
+spec:
+  ingressClassName: {{ .Values.ingressClassName | quote }}
+  tls:
+    - hosts: [{{ printf "app.%s" .Values.publicDomain | quote }}]
+      secretName: {{ $full }}-app-tls
+  rules:
+    - host: {{ printf "app.%s" .Values.publicDomain | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend: { service: { name: {{ $full }}-server, port: { name: http } } }
+          - path: /internal/asset-access/
+            pathType: Prefix
+            backend: { service: { name: {{ $full }}-server, port: { name: http } } }
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: {{ $full }}-canvas, port: { name: http } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $full }}-preview
+  labels: {{- include "dream-weave.labels" . | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.clusterIssuer | quote }}
+spec:
+  ingressClassName: {{ .Values.ingressClassName | quote }}
+  tls:
+    - hosts: [{{ printf "preview.%s" .Values.publicDomain | quote }}]
+      secretName: {{ $full }}-preview-tls
+  rules:
+    - host: {{ printf "preview.%s" .Values.publicDomain | quote }}
+      http:
+        paths:
+          - path: /internal/asset-access/
+            pathType: Prefix
+            backend: { service: { name: {{ $full }}-server, port: { name: http } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $full }}-office
+  labels: {{- include "dream-weave.labels" . | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.clusterIssuer | quote }}
+spec:
+  ingressClassName: {{ .Values.ingressClassName | quote }}
+  tls:
+    - hosts: [{{ printf "office.%s" .Values.publicDomain | quote }}]
+      secretName: {{ $full }}-office-tls
+  rules:
+    - host: {{ printf "office.%s" .Values.publicDomain | quote }}
+      http:
+        paths:
+          - path: /internal/office-viewer-sessions/
+            pathType: Prefix
+            backend: { service: { name: {{ $full }}-server, port: { name: http } } }
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: {{ $full }}-office-viewer-shell, port: { name: http } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $full }}-object-upload
+  labels: {{- include "dream-weave.labels" . | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.clusterIssuer | quote }}
+    nginx.ingress.kubernetes.io/proxy-body-size: "1g"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: {{ .Values.ingressClassName | quote }}
+  tls:
+    - hosts: [{{ printf "app.%s" .Values.publicDomain | quote }}]
+      secretName: {{ $full }}-app-tls
+  rules:
+    - host: {{ printf "app.%s" .Values.publicDomain | quote }}
+      http:
+        paths:
+          - path: /internal/object-upload(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend: { service: { name: {{ $full }}-object-upload, port: { name: http } } }

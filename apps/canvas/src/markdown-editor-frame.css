@@ -1,0 +1,73 @@
+@import '@milkdown/crepe/theme/common/style.css';
+@import '@milkdown/crepe/theme/frame.css';
+
+html, body { width: 100%; height: 100%; margin: 0; overflow: auto; }
+body { background: #fff; }
+#root { width: 100%; min-height: 100%; }
+#root { position: relative; color: #5f6673; }
+#root .milkdown { position: relative; min-height: 100%; background: #fff; }
+#root .milkdown .milkdown-block-handle { gap: 0; }
+#root .milkdown .milkdown-block-handle .operation-item { width: 24px; height: 24px; padding: 4px; }
+#root .milkdown .milkdown-block-handle .operation-item svg { width: 16px; height: 16px; }
+#root.is-readonly .milkdown .milkdown-block-handle,
+#root.is-readonly .milkdown .milkdown-slash-menu,
+#root.is-readonly .milkdown .milkdown-toolbar { display: none !important; }
+#root .milkdown .milkdown-slash-menu,
+#root .milkdown .milkdown-toolbar { border: .5px solid #eee; border-radius: 8px; background: rgb(255 255 255 / .96); box-shadow: 0 8px 24px rgb(26 37 61 / 12%); backdrop-filter: blur(16px); }
+#root .milkdown .milkdown-code-block,
+#root .milkdown .milkdown-code-block .cm-editor,
+#root .milkdown .milkdown-code-block .cm-gutters { background: #f8f9ff; }
+#root .milkdown .milkdown-code-block { color: #1b1c1d; }
+#root .milkdown .milkdown-code-block .cm-editor,
+#root .milkdown .milkdown-code-block .cm-content {
+  color: #000;
+  /* Keep code at the same 14px/21px type scale as regular paragraphs. The
+     Playground's Frame theme leaves CodeMirror's type inherited; setting it
+     to 16px here made code visibly larger than the 14px canvas body copy. */
+  font: 400 14px/21px var(--crepe-font-code, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);
+}
+#root .milkdown .milkdown-code-block .cm-cursor { border-left: 1px solid var(--crepe-color-outline, #a8a8a8); margin-left: 0; }
+#root .milkdown .milkdown-code-block .cm-activeLine { background: transparent !important; }
+#root .milkdown .milkdown-code-block .cm-gutters { display: none; color: #999; font: 16px/22.4px monospace; }
+#root .milkdown .milkdown-code-block .language-button { gap: 3px; margin-bottom: 4px; padding: 0; background: transparent; border: 0; box-shadow: none; outline: 0; color: #43474e; opacity: 1; font: 500 9px/12px Inter, Arial, Helvetica, sans-serif; }
+#root .milkdown .milkdown-code-block .language-button .expand-icon { width: 12px; height: 12px; }
+#root .milkdown .milkdown-code-block .language-button .expand-icon svg { width: 10px; height: 10px; }
+#root .milkdown .milkdown-code-block .tools-button-group { gap: 0; }
+#root .milkdown .milkdown-code-block .tools-button-group .copy-button { display: grid; width: 12px; height: 12px; padding: 1px; border: 0; border-radius: 0; background: transparent; box-shadow: none; outline: 0; color: #43474e; opacity: 1; font-size: 0; line-height: 0; }
+#root .milkdown .milkdown-code-block .tools-button-group .copy-button svg { width: 10px; height: 10px; }
+#root .milkdown .milkdown-code-block .list-wrapper { background: #f2f3fa; color: #1b1c1d; font: 16px/24px Inter, Arial, Helvetica, sans-serif; }
+#root .milkdown .milkdown-code-block .language-list { margin: 0; padding: 0; }
+#root .milkdown .milkdown-code-block .language-list-item { color: #1b1c1d; line-height: 20px; }
+#root .milkdown .milkdown-slash-menu { width: 248px; overflow: hidden; }
+#root .milkdown .milkdown-slash-menu .tab-group { border-bottom: 1px solid rgb(0 0 0 / 6%); padding: 6px 8px 0; }
+#root .milkdown .milkdown-slash-menu .tab-group ul { display: flex; gap: 2px; padding: 0; }
+#root .milkdown .milkdown-slash-menu .tab-group li { padding: 6px 8px; border-radius: 6px; color: #526074; font: 500 12px/16px ui-sans-serif, system-ui, sans-serif; }
+#root .milkdown .milkdown-slash-menu .tab-group li:hover,
+#root .milkdown .milkdown-slash-menu .tab-group li.selected { background: #f3f4f6; color: #152238; }
+#root .milkdown .milkdown-slash-menu .menu-groups { max-height: 300px; padding: 4px 8px 8px; }
+#root .milkdown .milkdown-slash-menu .menu-group h6 { padding: 10px 8px 4px; color: #788399; font: 700 10px/14px ui-sans-serif, system-ui, sans-serif; letter-spacing: .04em; }
+#root .milkdown .milkdown-slash-menu .menu-group li { min-width: 0; gap: 10px; padding: 7px 8px; border-radius: 6px; color: #152238; }
+#root .milkdown .milkdown-slash-menu .menu-group li.hover,
+#root .milkdown .milkdown-slash-menu .menu-group li:hover { background: #f3f4f6; }
+#root .milkdown .milkdown-slash-menu .menu-group li svg { width: 16px; height: 16px; color: #526074; fill: #526074; }
+#root .milkdown .milkdown-slash-menu .menu-group li > span { font: 500 13px/18px ui-sans-serif, system-ui, sans-serif; }
+#root .milkdown .milkdown-toolbar { min-height: 36px; padding: 4px; }
+#root .ProseMirror { min-height: 0; box-sizing: border-box; padding: 16px 64px; outline: 0; overflow-wrap: anywhere; caret-color: var(--crepe-color-outline, #a8a8a8); color: inherit; font: 400 14px/21px ui-sans-serif, system-ui, sans-serif; }
+#root .ProseMirror p { margin: 0; padding: 0; color: #5f6673; font: 400 14px/21px ui-sans-serif, system-ui, sans-serif; }
+#root .ProseMirror h1 { margin: 0 0 16px; color: #152238; font: 700 20px/25px ui-sans-serif, system-ui, sans-serif; }
+#root .ProseMirror h2 { margin: 16px 0 12px; color: #152238; font: 700 16px/20.8px ui-sans-serif, system-ui, sans-serif; }
+#root .ProseMirror h3 { margin: 12px 0 8px; color: #152238; font: 700 14px/18.2px ui-sans-serif, system-ui, sans-serif; }
+/* Keep the Playground list rhythm from Crepe's `reset.css` and
+   `list-item.css`. Colours remain Dream Weave's, but list content is 16/24
+   with 4px block padding so task checkboxes (32px) stay vertically aligned. */
+#root .ProseMirror ul, #root .ProseMirror ol { margin: 0; padding: 0; }
+#root .ProseMirror li { margin: 0; color: #5f6673; font: 400 16px/24px var(--crepe-font-default, ui-sans-serif, system-ui, sans-serif); }
+#root .ProseMirror li p { margin: 0; padding: 4px 0; color: inherit; font: inherit; }
+#root .ProseMirror strong { color: #152238; font-weight: 500; }
+#root .ProseMirror em { color: #5f6673; }
+#root .ProseMirror table { width: 100%; margin: 0 0 16px; border-collapse: collapse; }
+#root .ProseMirror thead { background: #f7f8fa; }
+#root .ProseMirror th, #root .ProseMirror td { border: .5px solid #e9e9e9; padding: 8px 12px; text-align: left; vertical-align: top; }
+#root .ProseMirror th { color: #152238; font: 500 14px/21px ui-sans-serif, system-ui, sans-serif; }
+#root .ProseMirror td { color: #5f6673; font: 400 14px/21px ui-sans-serif, system-ui, sans-serif; }
+#root .ProseMirror hr { margin: 0 0 24px; border: 0; border-top: 1px solid #e9e9e9; }

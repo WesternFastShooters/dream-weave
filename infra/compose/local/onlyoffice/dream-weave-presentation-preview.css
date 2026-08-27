@@ -1,0 +1,16 @@
+/* Keep the presentation canvas and its in-document controls intact. Only the
+ * embedded product footer is removed; the viewport then uses its released height. */
+#toolbar,
+.toolbar.bottom {
+  display: none !important;
+}
+
+#id_bottom_pannels_container,
+#id_panel_notes,
+#id_notes_overlay {
+  display: none !important;
+}
+
+#editor_sdk.viewer.bottom {
+  bottom: 0 !important;
+}

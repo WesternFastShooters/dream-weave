@@ -1,0 +1,169 @@
+name: dream-weave-local
+
+services:
+  reverse-proxy:
+    image: nginx:1.27-alpine
+    depends_on:
+      canvas: { condition: service_started }
+      dream-weave-server: { condition: service_started }
+    ports: ["443:443"]
+    volumes:
+      - ./nginx/reverse-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    networks: [public]
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: dreamweave
+      POSTGRES_USER: dreamweave
+      POSTGRES_PASSWORD: ${DW_POSTGRES_PASSWORD:?set DW_POSTGRES_PASSWORD in infra/compose/local/.env}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dreamweave -d dreamweave"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [public]
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${DW_MINIO_ACCESS_KEY:?set DW_MINIO_ACCESS_KEY in infra/compose/local/.env}
+      MINIO_ROOT_PASSWORD: ${DW_MINIO_SECRET_KEY:?set DW_MINIO_SECRET_KEY in infra/compose/local/.env}
+    volumes: [minio-data:/data]
+    networks: [public]
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-05-21T01-59-54Z
+    depends_on:
+      minio: { condition: service_started }
+    environment:
+      DW_S3_BUCKET: ${DW_S3_BUCKET:?set DW_S3_BUCKET in infra/compose/local/.env}
+      DW_MINIO_ACCESS_KEY: ${DW_MINIO_ACCESS_KEY:?set DW_MINIO_ACCESS_KEY in infra/compose/local/.env}
+      DW_MINIO_SECRET_KEY: ${DW_MINIO_SECRET_KEY:?set DW_MINIO_SECRET_KEY in infra/compose/local/.env}
+    entrypoint: ["/bin/sh", "-ec"]
+    volumes:
+      - ./minio/cors.xml:/config/cors.xml:ro
+    # Browser uploads go through the same-origin reverse proxy. Keep this
+    # bucket private and avoid a CORS policy entirely.
+    command: ["until mc alias set dw http://minio:9000 \"$$DW_MINIO_ACCESS_KEY\" \"$$DW_MINIO_SECRET_KEY\"; do sleep 1; done; mc mb --ignore-existing \"dw/$$DW_S3_BUCKET\""]
+    networks: [public]
+
+  dream-weave-server:
+    image: ${DW_SERVER_IMAGE:?build or provide DW_SERVER_IMAGE}
+    environment:
+      DATABASE_URL: ${DW_DATABASE_URL:?set DW_DATABASE_URL in infra/compose/local/.env}
+      DW_S3_ENDPOINT: http://minio:9000
+      DW_S3_BROWSER_UPLOAD_ENDPOINT: ${DW_S3_BROWSER_UPLOAD_ENDPOINT:-https://app.localhost/internal/object-upload}
+      DW_S3_BUCKET: ${DW_S3_BUCKET:?set DW_S3_BUCKET in infra/compose/local/.env}
+      DW_S3_ACCESS_KEY: ${DW_MINIO_ACCESS_KEY:?set DW_MINIO_ACCESS_KEY in infra/compose/local/.env}
+      DW_S3_SECRET_KEY: ${DW_MINIO_SECRET_KEY:?set DW_MINIO_SECRET_KEY in infra/compose/local/.env}
+      DW_BOOTSTRAP_ADMIN_EMAIL: ${DW_BOOTSTRAP_ADMIN_EMAIL:?set DW_BOOTSTRAP_ADMIN_EMAIL in infra/compose/local/.env}
+      DW_BOOTSTRAP_ADMIN_PASSWORD: ${DW_BOOTSTRAP_ADMIN_PASSWORD:?set DW_BOOTSTRAP_ADMIN_PASSWORD in infra/compose/local/.env}
+      DW_CAPABILITY_SECRET: ${DW_CAPABILITY_SECRET:?set DW_CAPABILITY_SECRET in infra/compose/local/.env}
+      ONLYOFFICE_JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:?set ONLYOFFICE_JWT_SECRET in infra/compose/local/.env}
+      DW_APP_ORIGIN: ${DW_APP_ORIGIN:-https://app.localhost}
+      # This host exposes capability-scoped preview bytes only. It never
+      # serves the authenticated canvas application or its API.
+      DW_PREVIEW_ORIGIN: ${DW_PREVIEW_ORIGIN:-https://preview.localhost}
+      DW_ONLYOFFICE_DOCUMENT_SERVER_URL: https://office.localhost
+      DW_OFFICE_SOURCE_PROXY_BASE: http://dream-weave-server:8081/internal
+      DW_OFFICE_SOURCE_PROXY_PORT: "8081"
+      DW_OFFICE_DOCUMENT_SERVER_CIDRS: 172.30.0.10/32
+    depends_on:
+      postgres: { condition: service_healthy }
+      minio-init: { condition: service_completed_successfully }
+      migrations: { condition: service_completed_successfully }
+    networks: [public, office-internal]
+
+  preview-worker:
+    image: ${DW_PREVIEW_WORKER_IMAGE:?build or provide DW_PREVIEW_WORKER_IMAGE}
+    entrypoint: ["/app/preview-worker"]
+    environment:
+      DATABASE_URL: ${DW_DATABASE_URL:?set DW_DATABASE_URL in infra/compose/local/.env}
+      DW_S3_ENDPOINT: http://minio:9000
+      DW_S3_BUCKET: ${DW_S3_BUCKET:?set DW_S3_BUCKET in infra/compose/local/.env}
+      DW_S3_ACCESS_KEY: ${DW_MINIO_ACCESS_KEY:?set DW_MINIO_ACCESS_KEY in infra/compose/local/.env}
+      DW_S3_SECRET_KEY: ${DW_MINIO_SECRET_KEY:?set DW_MINIO_SECRET_KEY in infra/compose/local/.env}
+      DW_PREVIEW_PROCESSOR: /app/media-preview-processor
+    depends_on:
+      postgres: { condition: service_healthy }
+      minio-init: { condition: service_completed_successfully }
+      migrations: { condition: service_completed_successfully }
+    networks: [public]
+
+  migrations:
+    image: ${DW_SERVER_IMAGE:?build or provide DW_SERVER_IMAGE}
+    entrypoint: ["/app/migrate"]
+    environment:
+      DATABASE_URL: ${DW_DATABASE_URL:?set DW_DATABASE_URL in infra/compose/local/.env}
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [public]
+
+  canvas:
+    image: ${DW_CANVAS_IMAGE:?build or provide DW_CANVAS_IMAGE}
+    environment:
+      DW_PUBLIC_APP_ORIGIN: https://app.localhost
+      DW_API_ORIGIN: https://app.localhost
+    networks: [public]
+
+  office-viewer-shell:
+    build:
+      context: ../../..
+      dockerfile: apps/office-viewer-shell/Dockerfile
+    environment:
+      APP_ORIGIN: https://app.localhost
+      DOCUMENT_SERVER_UPSTREAM: onlyoffice-document-server:80
+    depends_on:
+      onlyoffice-document-server: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/healthz >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [public, office-internal]
+
+  onlyoffice-document-server:
+    build:
+      context: ./onlyoffice
+      dockerfile: Dockerfile
+    image: dream-weave-local-onlyoffice-document-server:8.3.1
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:?set ONLYOFFICE_JWT_SECRET in infra/compose/local/.env}
+      JWT_HEADER: Authorization
+      JWT_IN_BODY: "true"
+      # The source proxy is intentionally private (Docker/Kubernetes service
+      # networking), so Document Server must be allowed to fetch this URL.
+      ALLOW_PRIVATE_IP_ADDRESS: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/healthcheck >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - onlyoffice-data:/var/www/onlyoffice/Data
+      - onlyoffice-logs:/var/log/onlyoffice
+      - onlyoffice-lib:/var/lib/onlyoffice
+    networks:
+      office-internal:
+        ipv4_address: 172.30.0.10
+
+networks:
+  public: {}
+  office-internal:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  postgres-data: {}
+  minio-data: {}
+  onlyoffice-data: {}
+  onlyoffice-logs: {}
+  onlyoffice-lib: {}

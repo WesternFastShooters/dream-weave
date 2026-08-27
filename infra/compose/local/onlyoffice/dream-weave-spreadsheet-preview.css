@@ -1,0 +1,10 @@
+/* Keep spreadsheet navigation and sheet tabs intact. Only the embedded
+ * product footer is removed; the viewport then uses its released height. */
+#toolbar,
+.toolbar.bottom {
+  display: none !important;
+}
+
+.viewer.bottom {
+  bottom: 0 !important;
+}

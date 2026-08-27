@@ -1,0 +1,61 @@
+server {
+  listen 8080;
+  server_name _;
+  server_tokens off;
+  root /usr/share/nginx/html;
+
+  location = /healthz { access_log off; return 200; }
+  location = /dw-viewer-shell { return 302 /dw-viewer-shell/; }
+
+  location ^~ /dw-viewer-shell/ {
+    try_files $uri $uri/ /dw-viewer-shell/index.html;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-src 'self'; child-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors ${APP_ORIGIN}" always;
+  }
+
+  # DocsAPI may prepend its build identifier (for example
+  # /8.3.1-<hash>/web-apps/) when creating the editor iframe. It also requests
+  # workers and other assets beneath that same prefix, so the whole generated
+  # prefix must reach Document Server rather than fall through to this shell.
+  location ~ ^/[0-9]+\.[0-9]+\.[0-9]+-[A-Za-z0-9]+/ {
+    proxy_pass http://${DOCUMENT_SERVER_UPSTREAM};
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    # TLS terminates at the outer proxy. Preserve that public scheme for
+    # Document Server so URLs it generates for converted preview files remain
+    # HTTPS when returned to the browser.
+    proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_buffering off;
+  }
+
+  location ^~ /web-apps/ {
+    proxy_pass http://${DOCUMENT_SERVER_UPSTREAM};
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_buffering off;
+  }
+
+  # The DocsAPI bootstrap is only the first part of an editor session. The
+  # iframe subsequently connects to Document Server paths such as /doc/ and
+  # /coauthoring/. Keep those endpoints on the same public origin so they are
+  # reachable from the sandboxed viewer and never fall through to static files.
+  location / {
+    proxy_pass http://${DOCUMENT_SERVER_UPSTREAM};
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_buffering off;
+  }
+}

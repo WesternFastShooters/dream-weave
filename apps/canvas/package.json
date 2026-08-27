@@ -1,0 +1,33 @@
+{
+  "name": "@dream-weave/canvas-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @dream-weave/canvas-renderer... --filter @dream-weave/creative-nodes... run build && vite",
+    "build": "pnpm --filter @dream-weave/canvas-renderer... --filter @dream-weave/creative-nodes... run build && vite build",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@dream-weave/canvas-core": "workspace:*",
+    "@dream-weave/canvas-interaction": "workspace:*",
+    "@dream-weave/canvas-renderer": "workspace:*",
+    "@dream-weave/creative-nodes": "workspace:*",
+    "@dream-weave/di": "workspace:*",
+    "@milkdown/core": "7.21.3",
+    "@milkdown/crepe": "7.21.3",
+    "@milkdown/prose": "7.21.3",
+    "@milkdown/utils": "7.21.3",
+    "@xyflow/react": "^12.10.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@playwright/test": "^1.61.1",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.5"
+  }
+}

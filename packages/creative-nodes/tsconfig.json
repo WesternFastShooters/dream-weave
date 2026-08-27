@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "lib": ["ES2022", "DOM"], "module": "ESNext", "moduleResolution": "Bundler", "strict": true,
+    "declaration": true, "declarationMap": true, "sourceMap": true, "rootDir": "src", "outDir": "dist", "jsx": "react-jsx",
+    "verbatimModuleSyntax": true, "skipLibCheck": true
+  },
+  "include": ["src"]
+}

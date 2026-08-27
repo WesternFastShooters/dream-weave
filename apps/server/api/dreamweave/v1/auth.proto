@@ -1,0 +1,13 @@
+syntax = "proto3";
+package dreamweave.v1;
+option go_package = "github.com/dream-weave/dream-weave/apps/server/api/dreamweave/v1;v1";
+
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+
+message CreateSessionRequest { string email = 1; string password = 2; }
+message CurrentPrincipal { string user_id = 1; string email = 2; }
+service AuthService {
+  rpc CreateSession(CreateSessionRequest) returns (CurrentPrincipal) { option (google.api.http) = { post: "/api/dreamweave/v1/auth/sessions" body: "*" }; }
+  rpc DeleteCurrentSession(google.protobuf.Empty) returns (google.protobuf.Empty) { option (google.api.http) = { delete: "/api/dreamweave/v1/auth/sessions/current" }; }
+}
